@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     # ── Ollama LLM ───────────────────────────────────────────────────────
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "qwen2.5-coder:7b"
-    OLLAMA_TIMEOUT: int = 120  # seconds
+    OLLAMA_TIMEOUT: int = 300  # seconds (ample headroom for local LLM inference)
 
     # ── Embeddings ───────────────────────────────────────────────────────
     EMBEDDING_PROVIDER: str = "ollama"  # "ollama" or "sentence-transformers"
