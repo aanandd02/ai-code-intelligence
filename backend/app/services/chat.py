@@ -216,15 +216,24 @@ class ChatService:
                 except Exception:
                     citations = []
 
+            provider_id = "groq" if (m.model and ("gpt-oss" in m.model or "qwen3.8" in m.model)) else "ollama"
             result.append({
                 "id": m.id,
                 "role": m.role,
                 "content": m.content,
                 "citations": citations,
                 "model": m.model,
+                "provider": provider_id,
                 "created_at": m.created_at.isoformat() if m.created_at else None,
             })
         return result
+
+    async def delete_session(self, session_id: str, session: AsyncSession) -> bool:
+        from sqlalchemy import delete
+        await session.execute(delete(Message).where(Message.session_id == session_id))
+        await session.execute(delete(ChatSession).where(ChatSession.id == session_id))
+        await session.commit()
+        return True
 
 
 chat_service = ChatService()

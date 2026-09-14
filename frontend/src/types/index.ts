@@ -119,6 +119,13 @@ export interface ChatResponse {
   tool_calls?: ToolCall[];
 }
 
+export interface ChatSessionInfo {
+  id: string;
+  title: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // ── Tool Calls ──────────────────────────────────────────────────────────
 
 export interface ToolCall {

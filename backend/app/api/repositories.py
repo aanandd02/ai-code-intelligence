@@ -376,6 +376,19 @@ async def get_chat_session_messages(
     return await chat_service.get_messages(session_id, session)
 
 
+@router.delete("/{repo_id}/chat/sessions/{session_id}")
+async def delete_chat_session(
+    repo_id: str,
+    session_id: str,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """Delete a chat session and its messages."""
+    from app.services.chat import chat_service
+
+    success = await chat_service.delete_session(session_id, session)
+    return {"success": success, "session_id": session_id}
+
+
 @router.get("/{repo_id}/models")
 async def list_available_models(
     repo_id: str,

@@ -10,6 +10,7 @@ import type {
   IndexingJob,
   SearchResponse,
   ChatResponse,
+  ChatSessionInfo,
   ReviewResponse,
   InvestigationResponse,
   GitStatus,
@@ -25,7 +26,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 120000, // 2 min for LLM operations
+  timeout: 300000, // 5 min for heavy backend operations
 });
 
 // ── Health ──────────────────────────────────────────────────────────────
@@ -76,12 +77,27 @@ export const semanticSearch = (repoId: string, query: string, topK = 10) =>
 // ── Chat ────────────────────────────────────────────────────────────────
 
 export const chat = (repoId: string, message: string, sessionId?: string, model?: string, provider?: string) =>
-  api.post<ChatResponse>(`/repositories/${repoId}/chat`, {
-    message,
-    session_id: sessionId,
-    model,
-    provider,
-  }).then(r => r.data);
+  api.post<ChatResponse>(
+    `/repositories/${repoId}/chat`,
+    {
+      message,
+      session_id: sessionId,
+      model,
+      provider,
+    },
+    {
+      timeout: 600000, // 10 minutes for heavy local AI inference without frontend abort
+    }
+  ).then(r => r.data);
+
+export const listChatSessions = (repoId: string) =>
+  api.get<ChatSessionInfo[]>(`/repositories/${repoId}/chat/sessions`).then(r => r.data);
+
+export const getChatSessionMessages = (repoId: string, sessionId: string) =>
+  api.get<any[]>(`/repositories/${repoId}/chat/sessions/${sessionId}/messages`).then(r => r.data);
+
+export const deleteChatSession = (repoId: string, sessionId: string) =>
+  api.delete(`/repositories/${repoId}/chat/sessions/${sessionId}`).then(r => r.data);
 
 // ── Code Review ─────────────────────────────────────────────────────────
 
