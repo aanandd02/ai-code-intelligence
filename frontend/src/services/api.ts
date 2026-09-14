@@ -13,7 +13,7 @@ import type {
   ReviewResponse,
   InvestigationResponse,
   GitStatus,
-  OllamaModel,
+  ModelsCatalog,
   FileInfo,
   FileContent,
 } from '../types';
@@ -75,11 +75,12 @@ export const semanticSearch = (repoId: string, query: string, topK = 10) =>
 
 // ── Chat ────────────────────────────────────────────────────────────────
 
-export const chat = (repoId: string, message: string, sessionId?: string, model?: string) =>
+export const chat = (repoId: string, message: string, sessionId?: string, model?: string, provider?: string) =>
   api.post<ChatResponse>(`/repositories/${repoId}/chat`, {
     message,
     session_id: sessionId,
     model,
+    provider,
   }).then(r => r.data);
 
 // ── Code Review ─────────────────────────────────────────────────────────
@@ -135,6 +136,6 @@ export const applyPatch = (repoId: string, patchId: string) =>
 // ── Models ──────────────────────────────────────────────────────────────
 
 export const listModels = () =>
-  api.get<{ models: OllamaModel[]; current_model: string }>('/models').then(r => r.data);
+  api.get<ModelsCatalog>('/models').then(r => r.data);
 
 export default api;

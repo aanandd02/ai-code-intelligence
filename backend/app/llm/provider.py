@@ -174,6 +174,12 @@ class GroqLLMProvider(LLMProvider):
     Provides fast, zero-cost completions without running GPU models locally.
     """
 
+    KNOWN_MODELS: list[str] = [
+        "openai/gpt-oss-120b",
+        "qwen/qwen3.8-27b",
+        "openai/gpt-oss-20b",
+    ]
+
     def __init__(self, api_key: str | None = None, model: str | None = None):
         self.api_key = api_key or settings.GROQ_API_KEY
         self.model = model or settings.GROQ_MODEL or "openai/gpt-oss-120b"
@@ -186,11 +192,7 @@ class GroqLLMProvider(LLMProvider):
         return model
 
     async def list_models(self) -> list[str]:
-        return [
-            "openai/gpt-oss-120b",
-            "openai/gpt-oss-20b",
-            "qwen/qwen3.8-27b",
-        ]
+        return list(self.KNOWN_MODELS)
 
     async def generate(
         self,
@@ -262,4 +264,74 @@ def get_llm_provider() -> LLMProvider:
     if settings.LLM_PROVIDER.lower() == "groq" and settings.GROQ_API_KEY:
         return GroqLLMProvider()
     return OllamaLLMProvider()
+
+
+def get_llm_for_model(model: str | None = None, provider: str | None = None) -> tuple[LLMProvider, str, str]:
+    """
+    Resolve (provider_instance, target_model_name, provider_id)
+    based on requested provider ('ollama' or 'groq') and model.
+    """
+    p_lower = (provider or "").strip().lower()
+
+    if p_lower == "groq":
+        if settings.GROQ_API_KEY:
+            groq = GroqLLMProvider()
+            target_model = groq._resolve_model(model)
+            return groq, target_model, "groq"
+        ollama = OllamaLLMProvider()
+        return ollama, model or settings.OLLAMA_MODEL, "ollama"
+
+    if p_lower == "ollama":
+        ollama = OllamaLLMProvider()
+        return ollama, model or settings.OLLAMA_MODEL, "ollama"
+
+    # Infer from model name if provider not explicit
+    if model:
+        if model in GroqLLMProvider.KNOWN_MODELS or "openai/" in model:
+            if settings.GROQ_API_KEY:
+                groq = GroqLLMProvider()
+                return groq, groq._resolve_model(model), "groq"
+
+    # Default to configured provider (ollama by default)
+    if settings.LLM_PROVIDER.lower() == "groq" and settings.GROQ_API_KEY:
+        groq = GroqLLMProvider()
+        return groq, groq._resolve_model(model), "groq"
+
+    ollama = OllamaLLMProvider()
+    return ollama, model or settings.OLLAMA_MODEL, "ollama"
+
+
+async def get_available_models_catalog() -> dict[str, Any]:
+    """Return catalog of available Local (Ollama) and Cloud (Groq) models."""
+    ollama = OllamaLLMProvider()
+    local_models = await ollama.list_models()
+    if not local_models:
+        local_models = [settings.OLLAMA_MODEL]
+
+    groq_available = bool(settings.GROQ_API_KEY)
+    groq_models = list(GroqLLMProvider.KNOWN_MODELS) if groq_available else []
+
+    return {
+        "providers": [
+            {
+                "id": "ollama",
+                "name": "Local (Offline)",
+                "description": "Runs 100% locally on your machine. $0 cost, completely private.",
+                "is_available": True,
+                "models": local_models,
+                "default_model": settings.OLLAMA_MODEL if settings.OLLAMA_MODEL in local_models else local_models[0],
+            },
+            {
+                "id": "groq",
+                "name": "Cloud (Groq)",
+                "description": "High-speed cloud inference via Groq API.",
+                "is_available": groq_available,
+                "models": groq_models,
+                "default_model": settings.GROQ_MODEL if groq_available else None,
+            },
+        ],
+        "active_provider": settings.LLM_PROVIDER.lower(),
+        "active_model": settings.OLLAMA_MODEL if settings.LLM_PROVIDER.lower() == "ollama" else settings.GROQ_MODEL,
+        "embedding_model": settings.EMBEDDING_MODEL,
+    }
 

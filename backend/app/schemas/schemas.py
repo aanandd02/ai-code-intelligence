@@ -121,6 +121,7 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     session_id: str | None = None
     model: str | None = None
+    provider: str | None = None  # "ollama" (local) or "groq" (cloud)
 
 
 class Citation(BaseModel):
@@ -136,6 +137,7 @@ class ChatResponse(BaseModel):
     message: str
     citations: list[Citation] = []
     model: str | None = None
+    provider: str | None = None
     tool_calls: list[dict] | None = None
 
 

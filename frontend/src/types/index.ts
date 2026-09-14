@@ -106,6 +106,7 @@ export interface ChatMessage {
   citations?: Citation[];
   tool_calls?: ToolCall[];
   model?: string;
+  provider?: string;
   timestamp?: string;
 }
 
@@ -114,6 +115,7 @@ export interface ChatResponse {
   message: string;
   citations: Citation[];
   model?: string;
+  provider?: string;
   tool_calls?: ToolCall[];
 }
 
@@ -198,4 +200,22 @@ export interface OllamaModel {
   name: string;
   size?: string;
   modified_at?: string;
+}
+
+export interface LLMProviderInfo {
+  id: 'ollama' | 'groq';
+  name: string;
+  description: string;
+  is_available: boolean;
+  models: string[];
+  default_model: string;
+}
+
+export interface ModelsCatalog {
+  providers: LLMProviderInfo[];
+  active_provider: 'ollama' | 'groq';
+  active_model: string;
+  embedding_model?: string;
+  models: { name: string }[];
+  current_model: string;
 }

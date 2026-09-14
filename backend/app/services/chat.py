@@ -41,6 +41,7 @@ class ChatService:
         session_id: str | None,
         model: str | None,
         session: AsyncSession,
+        provider: str | None = None,
     ) -> ChatResponse:
         # 1. Fetch Repository
         res = await session.execute(select(Repository).where(Repository.id == repo_id))
@@ -54,18 +55,19 @@ class ChatService:
             s_res = await session.execute(
                 select(ChatSession).where(
                     ChatSession.id == session_id,
-                    ChatSession.repository_id == repo.id,
+                    ChatSession.repository_id == repo_id,
                 )
             )
             chat_sess = s_res.scalar_one_or_none()
 
         if not chat_sess:
             chat_sess = ChatSession(
-                repository_id=repo.id,
-                title=user_content[:60] + "..." if len(user_content) > 60 else user_content,
+                id=uuid.uuid4().hex,
+                repository_id=repo_id,
+                title=user_content[:50],
             )
             session.add(chat_sess)
-            await session.flush()
+            await session.commit()
             await session.refresh(chat_sess)
 
         # 3. Save User Message
@@ -73,20 +75,20 @@ class ChatService:
             session_id=chat_sess.id,
             role="user",
             content=user_content,
-            model=model or settings.OLLAMA_MODEL,
         )
         session.add(user_msg)
-        await session.flush()
+        await session.commit()
 
-        # 4. Semantic Search for Relevant Code Snippets
-        repo_languages = json.loads(repo.languages) if repo.languages else None
-        search_res = await semantic_search(
-            repo_id=repo.id,
+        # 4. Context Augmentation via Semantic Search
+        repo_languages = repo.languages_list if hasattr(repo, "languages_list") else []
+        search_results = await semantic_search(
             query=user_content,
+            repo_id=repo_id,
             top_k=settings.SEARCH_TOP_K,
         )
 
-        snippets_text, citations = self.context_builder.format_code_snippets(search_res.results)
+        snippets = search_results.results if hasattr(search_results, "results") else []
+        snippets_text, citations = self.context_builder.format_code_snippets(snippets)
         augmented_prompt = self.context_builder.assemble_user_prompt(user_content, snippets_text)
 
         # 5. Fetch recent chat history
@@ -110,9 +112,10 @@ class ChatService:
             languages=repo_languages,
         )
 
-        # 7. Call LLM
-        llm = get_llm_provider()
-        target_model = model or getattr(llm, "default_model", settings.OLLAMA_MODEL)
+        # 7. Call LLM with user-selected or default provider
+        from app.llm.provider import get_llm_for_model
+
+        llm, target_model, active_provider = get_llm_for_model(model=model, provider=provider)
         assistant_reply = await llm.chat(
             messages=chat_history,
             system=system_prompt,
@@ -136,6 +139,7 @@ class ChatService:
             message=assistant_reply,
             citations=citations,
             model=target_model,
+            provider=active_provider,
         )
 
     async def list_sessions(self, repo_id: str, session: AsyncSession) -> list[dict[str, Any]]:

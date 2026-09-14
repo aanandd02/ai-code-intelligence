@@ -7,6 +7,7 @@ import { Send, Bot, User, FileCode, Loader2 } from 'lucide-react';
 import { listRepositories, chat } from '../services/api';
 import type { Repository, ChatMessage, Citation } from '../types';
 import ToolTimeline from '../components/ToolTimeline';
+import ModelSelector from '../components/ModelSelector';
 
 function CitationBadge({ citation }: { citation: Citation }) {
   return (
@@ -38,6 +39,14 @@ export default function Chat() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>();
+  const [provider, setProvider] = useState<'ollama' | 'groq'>(() => {
+    const saved = localStorage.getItem('ai_provider');
+    return saved === 'groq' ? 'groq' : 'ollama';
+  });
+  const [model, setModel] = useState<string>(() => {
+    const saved = localStorage.getItem('ai_model');
+    return saved || 'qwen2.5-coder:7b';
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,6 +60,13 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const handleModelSelect = (newProvider: 'ollama' | 'groq', newModel: string) => {
+    setProvider(newProvider);
+    setModel(newModel);
+    localStorage.setItem('ai_provider', newProvider);
+    localStorage.setItem('ai_model', newModel);
+  };
+
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     if (!input.trim() || !selectedRepo || loading) return;
@@ -61,7 +77,7 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      const response = await chat(selectedRepo, input, sessionId);
+      const response = await chat(selectedRepo, input, sessionId, model, provider);
       setSessionId(response.session_id);
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -72,6 +88,7 @@ export default function Chat() {
           tool: tc.tool || (tc as any).name || 'unknown',
         })),
         model: response.model,
+        provider: response.provider || provider,
       }]);
     } catch (err: any) {
       setMessages(prev => [...prev, {
@@ -85,24 +102,32 @@ export default function Chat() {
 
   return (
     <>
-      <div className="main-header">
-        <span className="main-header-title">AI Chat</span>
-        {repos.length > 0 && (
-          <select
-            value={selectedRepo}
-            onChange={(e) => { setSelectedRepo(e.target.value); setMessages([]); setSessionId(undefined); }}
-            style={{
-              background: 'var(--bg-primary)',
-              border: '1px solid var(--border-default)',
-              borderRadius: 'var(--radius-sm)',
-              color: 'var(--text-primary)',
-              padding: '4px 8px',
-              fontSize: 12,
-            }}
-          >
-            {repos.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-          </select>
-        )}
+      <div className="main-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span className="main-header-title">AI Chat</span>
+          {repos.length > 0 && (
+            <select
+              value={selectedRepo}
+              onChange={(e) => { setSelectedRepo(e.target.value); setMessages([]); setSessionId(undefined); }}
+              style={{
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text-primary)',
+                padding: '4px 8px',
+                fontSize: 12,
+              }}
+            >
+              {repos.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          )}
+        </div>
+
+        <ModelSelector
+          selectedProvider={provider}
+          selectedModel={model}
+          onSelect={handleModelSelect}
+        />
       </div>
 
       {/* Messages */}
@@ -157,9 +182,38 @@ export default function Chat() {
                 {msg.role === 'user' ? <User size={16} /> : <Bot size={16} style={{ color: 'var(--accent-blue)' }} />}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                  {msg.role === 'user' ? 'You' : 'AI Assistant'}
-                  {msg.model && <span style={{ fontWeight: 400, marginLeft: 8 }}>({msg.model})</span>}
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>{msg.role === 'user' ? 'You' : 'AI Assistant'}</span>
+                  {msg.role === 'assistant' && (
+                    <>
+                      {msg.provider === 'groq' ? (
+                        <span
+                          className="badge"
+                          style={{
+                            fontSize: 10,
+                            background: 'rgba(188, 140, 255, 0.15)',
+                            color: 'var(--accent-purple)',
+                            borderColor: 'rgba(188, 140, 255, 0.3)',
+                            padding: '1px 6px',
+                          }}
+                        >
+                          ☁️ Groq Cloud
+                        </span>
+                      ) : (
+                        <span
+                          className="badge badge-ok"
+                          style={{ fontSize: 10, padding: '1px 6px' }}
+                        >
+                          🖥️ Local Offline
+                        </span>
+                      )}
+                      {msg.model && (
+                        <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 11 }}>
+                          ({msg.model})
+                        </span>
+                      )}
+                    </>
+                  )}
                 </div>
                 <div style={{
                   fontSize: 14,

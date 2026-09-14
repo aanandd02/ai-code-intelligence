@@ -71,16 +71,20 @@ app.include_router(repositories_router, prefix="/api")
 
 @app.get("/api/models", tags=["models"])
 async def get_models():
-    """List locally installed Ollama models."""
-    from app.llm.provider import get_llm_provider
+    """List available Local and Cloud models catalog."""
+    from app.llm.provider import get_available_models_catalog
 
-    llm = get_llm_provider()
-    models = await llm.list_models()
-    return {
-        "models": [{"name": m} for m in models],
-        "current_model": settings.OLLAMA_MODEL,
-        "embedding_model": settings.EMBEDDING_MODEL,
-    }
+    catalog = await get_available_models_catalog()
+    # Backward compatibility: flatten all model names into models list
+    all_models = []
+    for p in catalog.get("providers", []):
+        for m in p.get("models", []):
+            if m not in all_models:
+                all_models.append(m)
+
+    catalog["models"] = [{"name": m} for m in all_models]
+    catalog["current_model"] = catalog.get("active_model", settings.OLLAMA_MODEL)
+    return catalog
 
 
 @app.get("/", tags=["root"])

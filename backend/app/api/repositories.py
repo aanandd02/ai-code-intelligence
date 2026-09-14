@@ -348,6 +348,7 @@ async def chat_with_repository(
         user_content=req.message,
         session_id=req.session_id,
         model=req.model,
+        provider=req.provider,
         session=session,
     )
 
