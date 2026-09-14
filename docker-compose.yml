@@ -1,0 +1,63 @@
+# AI Code Intelligence & Review Agent
+# Docker Compose — 100% local, zero-cost
+# No paid APIs, no cloud billing, no subscriptions
+
+services:
+  # ── Backend (FastAPI) ──────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aci-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - DATABASE_URL=sqlite+aiosqlite:///./data/code_intelligence.db
+      - LOG_LEVEL=INFO
+    volumes:
+      - backend_data:/app/data
+      - /:/host_fs:ro  # Read-only access to host filesystem for repo analysis
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Linux compatibility
+
+  # ── Frontend (React + Vite) ────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: aci-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ── Qdrant Vector Database ────────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: aci-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  backend_data:
+    driver: local
+  qdrant_data:
+    driver: local
