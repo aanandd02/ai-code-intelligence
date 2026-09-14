@@ -19,7 +19,7 @@ from app.core.logging import get_logger
 from app.db.models import ChatSession, Message, Repository
 from app.llm.provider import get_llm_provider
 from app.retrieval.search import semantic_search
-from app.schemas.schemas import ChatResponse, Citation
+from app.schemas.schemas import ChatResponse, Citation, SearchResult
 
 logger = get_logger(__name__)
 
@@ -87,7 +87,48 @@ class ChatService:
             top_k=settings.SEARCH_TOP_K,
         )
 
-        snippets = search_results.results if hasattr(search_results, "results") else []
+        snippets = list(search_results.results) if hasattr(search_results, "results") else []
+
+        # If snippets are few (< 3) or query asks broad questions (e.g. bugs, architecture, overview),
+        # supplement with key source files directly from the repository so the AI has concrete code to analyze.
+        broad_keywords = {"bug", "bugs", "issue", "issues", "error", "architecture", "overview", "explain", "security", "structure", "audit", "review", "flow", "auth"}
+        user_words = {w.strip("?,.!;:").lower() for w in user_content.split()}
+        is_broad = bool(user_words & broad_keywords) or len(snippets) < 2
+
+        if is_broad:
+            repo_path_obj = Path(repo.path)
+            candidate_files = [
+                "backend/app/main.py",
+                "backend/app/api/repositories.py",
+                "backend/app/services/chat.py",
+                "backend/app/core/config.py",
+                "frontend/src/App.tsx",
+                "frontend/src/pages/Chat.tsx",
+            ]
+            existing_paths = {s.file_path for s in snippets}
+            for rel_f in candidate_files:
+                target = repo_path_obj / rel_f
+                if target.is_file() and rel_f not in existing_paths:
+                    try:
+                        lines = target.read_text(encoding="utf-8", errors="ignore").splitlines()
+                        sample_lines = lines[:75]
+                        snippets.append(
+                            SearchResult(
+                                file_path=rel_f,
+                                symbol_name=None,
+                                symbol_type="module_overview",
+                                language="python" if rel_f.endswith(".py") else "typescript",
+                                start_line=1,
+                                end_line=len(sample_lines),
+                                content="\n".join(sample_lines),
+                                score=0.85,
+                            )
+                        )
+                        if len(snippets) >= 5:
+                            break
+                    except Exception:
+                        pass
+
         snippets_text, citations = self.context_builder.format_code_snippets(snippets)
         augmented_prompt = self.context_builder.assemble_user_prompt(user_content, snippets_text)
 

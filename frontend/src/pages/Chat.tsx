@@ -8,6 +8,7 @@ import { listRepositories, chat } from '../services/api';
 import type { Repository, ChatMessage, Citation } from '../types';
 import ToolTimeline from '../components/ToolTimeline';
 import ModelSelector from '../components/ModelSelector';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 
 function CitationBadge({ citation }: { citation: Citation }) {
   return (
@@ -215,14 +216,18 @@ export default function Chat() {
                     </>
                   )}
                 </div>
-                <div style={{
-                  fontSize: 14,
-                  lineHeight: 1.6,
-                  color: 'var(--text-primary)',
-                  whiteSpace: 'pre-wrap',
-                }}>
-                  {msg.content}
-                </div>
+                {msg.role === 'assistant' ? (
+                  <MarkdownRenderer content={msg.content} />
+                ) : (
+                  <div style={{
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                    color: 'var(--text-primary)',
+                    whiteSpace: 'pre-wrap',
+                  }}>
+                    {msg.content}
+                  </div>
+                )}
                 {msg.citations && msg.citations.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
                     {msg.citations.map((c, j) => (
