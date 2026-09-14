@@ -83,7 +83,7 @@ export default function Dashboard() {
           AI Code Intelligence
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
-          Repository-aware AI assistant — 100% local, zero API cost
+          Repository-aware AI assistant — Intelligent Code Analysis
         </p>
       </div>
 
@@ -136,10 +136,6 @@ export default function Dashboard() {
             {repos.reduce((sum, r) => sum + r.total_chunks, 0)}
           </div>
           <div className="stat-label">Indexed Chunks</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">$0</div>
-          <div className="stat-label">API Cost</div>
         </div>
       </div>
 

@@ -82,7 +82,7 @@ export default function Sidebar() {
         color: 'var(--text-tertiary)',
         textAlign: 'center',
       }}>
-        100% Local • $0 API Cost
+        AI Code Intelligence • v1.0
       </div>
     </aside>
   );
