@@ -44,7 +44,9 @@ class ContextBuilder:
         languages: list[str] | None = None,
     ) -> str:
         """Build the grounded system prompt with repo metadata."""
-        summary = generate_repo_summary_text(repo_name, repo_path, languages)
+        from app.core.config import resolve_host_path
+        resolved = resolve_host_path(str(repo_path)) or repo_path
+        summary = generate_repo_summary_text(repo_name, resolved, languages)
         return SYSTEM_PROMPT_TEMPLATE.format(repo_summary=summary)
 
     def format_code_snippets(

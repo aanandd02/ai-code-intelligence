@@ -20,6 +20,7 @@ services:
       - DATABASE_URL=sqlite+aiosqlite:///./data/code_intelligence.db
       - LOG_LEVEL=INFO
     volumes:
+      - ./backend/app:/app/app
       - backend_data:/app/data
       - /:/host_fs:ro  # Read-only access to host filesystem for repo analysis
     depends_on:

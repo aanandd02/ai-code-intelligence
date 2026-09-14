@@ -46,7 +46,7 @@ def analyze_repository_structure(repo_path: Path) -> dict[str, Any]:
         top_dirs = [d.name for d in repo_path.iterdir() if d.is_dir() and not d.name.startswith(".") and d.name not in {"node_modules", "venv", "__pycache__", "dist", "build"}]
     except Exception as e:
         logger.warning(f"Error inspecting repo path {repo_path}: {e}")
-        return {"frameworks": [], "config_files": [], "structure": {}}
+        return {"frameworks": [], "config_files": [], "top_directories": [], "entry_points": [], "source_files": [], "structure": {}}
 
     # 2. Check for common configuration files across root and key subdirectories
     common_configs = [

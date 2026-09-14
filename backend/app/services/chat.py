@@ -96,7 +96,8 @@ class ChatService:
         is_broad = bool(user_words & broad_keywords) or len(snippets) < 2
 
         if is_broad:
-            repo_path_obj = Path(repo.path)
+            from app.core.config import resolve_host_path
+            repo_path_obj = resolve_host_path(repo.path) or Path(repo.path)
             candidate_files = [
                 "backend/app/main.py",
                 "backend/app/api/repositories.py",
@@ -147,9 +148,11 @@ class ChatService:
         chat_history.append({"role": "user", "content": augmented_prompt})
 
         # 6. Build system prompt
+        from app.core.config import resolve_host_path as _rhp
+        _resolved_repo_path = _rhp(repo.path) or Path(repo.path)
         system_prompt = self.context_builder.build_system_prompt(
             repo_name=repo.name,
-            repo_path=Path(repo.path),
+            repo_path=_resolved_repo_path,
             languages=repo_languages,
         )
 

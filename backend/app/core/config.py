@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     QDRANT_PORT: int = 6333
     QDRANT_GRPC_PORT: int = 6334
 
+    # ── Host Filesystem Mapping (Docker on macOS) ───────────────────────
+    # On macOS Docker Desktop the host root is mounted at /host_fs/host_mnt
+    # On Linux Docker it is typically /host_fs directly.
+    HOST_FS_PREFIX: str = "/host_fs/host_mnt"  # override to "" for Linux
+
     # ── Repository Settings ──────────────────────────────────────────────
     MAX_FILE_SIZE_MB: int = 10
     MAX_REPO_FILES: int = 50000
@@ -83,3 +88,24 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def resolve_host_path(path: str | None) -> Path | None:
+    """
+    Convert a host-machine absolute path to the corresponding in-container path.
+    When running inside Docker on macOS, /Users/... is accessible as
+    /host_fs/host_mnt/Users/...
+    Returns None if path is None or cannot be resolved.
+    """
+    if not path:
+        return None
+    p = Path(path)
+    if p.exists():
+        return p
+    # Try prepending the host_fs prefix
+    if settings.HOST_FS_PREFIX:
+        candidate = Path(settings.HOST_FS_PREFIX) / p.relative_to("/")
+        if candidate.exists():
+            return candidate
+    return p  # return as-is; caller handles non-existent gracefully
+
