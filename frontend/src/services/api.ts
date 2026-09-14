@@ -99,6 +99,9 @@ export const getChatSessionMessages = (repoId: string, sessionId: string) =>
 export const deleteChatSession = (repoId: string, sessionId: string) =>
   api.delete(`/repositories/${repoId}/chat/sessions/${sessionId}`).then(r => r.data);
 
+export const clearAllChatSessions = (repoId: string) =>
+  api.delete(`/repositories/${repoId}/chat/sessions`).then(r => r.data);
+
 // ── Code Review ─────────────────────────────────────────────────────────
 
 export const reviewCode = (repoId: string, data: {

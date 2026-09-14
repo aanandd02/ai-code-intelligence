@@ -235,5 +235,18 @@ class ChatService:
         await session.commit()
         return True
 
+    async def clear_all_sessions(self, repo_id: str, session: AsyncSession) -> int:
+        from sqlalchemy import delete
+        s_res = await session.execute(
+            select(ChatSession.id).where(ChatSession.repository_id == repo_id)
+        )
+        session_ids = list(s_res.scalars().all())
+        if session_ids:
+            await session.execute(delete(Message).where(Message.session_id.in_(session_ids)))
+            del_res = await session.execute(delete(ChatSession).where(ChatSession.repository_id == repo_id))
+            await session.commit()
+            return del_res.rowcount or len(session_ids)
+        return 0
+
 
 chat_service = ChatService()

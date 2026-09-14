@@ -364,6 +364,18 @@ async def list_repo_chat_sessions(
     return await chat_service.list_sessions(repo_id, session)
 
 
+@router.delete("/{repo_id}/chat/sessions")
+async def clear_all_chat_sessions(
+    repo_id: str,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """Clear all chat sessions and messages for a repository."""
+    from app.services.chat import chat_service
+
+    count = await chat_service.clear_all_sessions(repo_id, session)
+    return {"success": True, "deleted_count": count}
+
+
 @router.get("/{repo_id}/chat/sessions/{session_id}/messages")
 async def get_chat_session_messages(
     repo_id: str,

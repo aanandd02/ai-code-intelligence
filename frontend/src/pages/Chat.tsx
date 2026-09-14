@@ -26,6 +26,7 @@ import {
   listChatSessions,
   getChatSessionMessages,
   deleteChatSession,
+  clearAllChatSessions,
 } from '../services/api';
 import type { Repository, ChatMessage, Citation, ChatSessionInfo } from '../types';
 import ToolTimeline from '../components/ToolTimeline';
@@ -175,14 +176,30 @@ export default function Chat() {
 
   const handleDeleteSession = async (e: React.MouseEvent, sid: string) => {
     e.stopPropagation();
+    // Optimistically remove session from UI immediately
+    setSessions((prev) => prev.filter((s) => s.id !== sid));
+    if (sessionId === sid) {
+      handleNewChat();
+    }
     try {
       await deleteChatSession(selectedRepo, sid);
-      setSessions((prev) => prev.filter((s) => s.id !== sid));
-      if (sessionId === sid) {
-        handleNewChat();
-      }
     } catch (err) {
       console.error('Failed to delete session', err);
+      loadSessions(selectedRepo);
+    }
+  };
+
+  const handleClearAllSessions = async () => {
+    if (!selectedRepo || sessions.length === 0) return;
+    if (!window.confirm('Are you sure you want to delete all chat history for this repository?')) return;
+    // Optimistically clear sessions immediately
+    setSessions([]);
+    handleNewChat();
+    try {
+      await clearAllChatSessions(selectedRepo);
+    } catch (err) {
+      console.error('Failed to clear sessions', err);
+      loadSessions(selectedRepo);
     }
   };
 
@@ -399,14 +416,40 @@ export default function Chat() {
                 }}
               >
                 <span>Recent Conversations</span>
-                <button
-                  type="button"
-                  onClick={() => loadSessions(selectedRepo)}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer' }}
-                  title="Refresh conversation list"
-                >
-                  <RefreshCw size={11} className={loadingSessions ? 'animate-spin' : ''} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {sessions.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearAllSessions}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-tertiary)',
+                        cursor: 'pointer',
+                        fontSize: 10,
+                        fontWeight: 500,
+                        textTransform: 'none',
+                        letterSpacing: 'normal',
+                        padding: '2px 4px',
+                        borderRadius: 3,
+                        transition: 'color 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--accent-red)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-tertiary)')}
+                      title="Clear all chat history"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => loadSessions(selectedRepo)}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer' }}
+                    title="Refresh conversation list"
+                  >
+                    <RefreshCw size={11} className={loadingSessions ? 'animate-spin' : ''} />
+                  </button>
+                </div>
               </div>
 
               {sessions.length === 0 ? (
@@ -472,18 +515,28 @@ export default function Chat() {
                           background: 'none',
                           border: 'none',
                           color: 'var(--text-tertiary)',
-                          padding: '3px 4px',
+                          padding: '5px 6px',
                           cursor: 'pointer',
                           borderRadius: 4,
                           display: 'inline-flex',
                           alignItems: 'center',
-                          opacity: 0.6,
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          marginLeft: 4,
+                          transition: 'all 0.15s ease',
                         }}
                         title="Delete chat session"
-                        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--accent-red)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-tertiary)')}
+                        aria-label="Delete chat session"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = 'var(--accent-red)';
+                          e.currentTarget.style.background = 'rgba(248, 81, 73, 0.12)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = 'var(--text-tertiary)';
+                          e.currentTarget.style.background = 'transparent';
+                        }}
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   );
