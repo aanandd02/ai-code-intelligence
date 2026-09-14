@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { GitBranch, GitCommit, FileDiff,  } from 'lucide-react';
+import { GitBranch, GitCommit, FileDiff } from 'lucide-react';
 import { listRepositories, getGitStatus, getGitDiff, getGitLog } from '../services/api';
 import type { Repository, GitStatus, GitLogEntry } from '../types';
 

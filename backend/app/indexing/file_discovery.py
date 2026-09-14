@@ -100,7 +100,7 @@ def _load_gitignore(repo_path: Path) -> pathspec.PathSpec | None:
 
     try:
         with open(gitignore_path, "r") as f:
-            return pathspec.PathSpec.from_lines("gitwildmatch", f)
+            return pathspec.PathSpec.from_lines("gitignore", f)
     except Exception as e:
         logger.warning(f"Failed to load .gitignore: {e}")
         return None

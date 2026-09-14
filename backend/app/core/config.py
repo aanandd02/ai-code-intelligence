@@ -30,9 +30,15 @@ class Settings(BaseSettings):
     # ── Database (SQLite) ────────────────────────────────────────────────
     DATABASE_URL: str = "sqlite+aiosqlite:///./data/code_intelligence.db"
 
+    # ── LLM Provider ("ollama" or "groq") ───────────────────────────────
+    LLM_PROVIDER: str = "groq"
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
+    GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
+
     # ── Ollama LLM ───────────────────────────────────────────────────────
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "codellama:7b"
+    OLLAMA_MODEL: str = "qwen2.5-coder:7b"
     OLLAMA_TIMEOUT: int = 120  # seconds
 
     # ── Embeddings ───────────────────────────────────────────────────────

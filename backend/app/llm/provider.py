@@ -154,6 +154,81 @@ class OllamaLLMProvider(LLMProvider):
         )
 
 
+class GroqLLMProvider(LLMProvider):
+    """
+    Cloud LLM provider using Groq's high-speed free tier API.
+    Provides fast, zero-cost completions without running GPU models locally.
+    """
+
+    def __init__(self, api_key: str | None = None, model: str | None = None):
+        self.api_key = api_key or settings.GROQ_API_KEY
+        self.model = model or settings.GROQ_MODEL
+        self.base_url = settings.GROQ_BASE_URL.rstrip("/")
+
+    async def list_models(self) -> list[str]:
+        return [
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+            "qwen/qwen3.8-27b",
+        ]
+
+    async def generate(
+        self,
+        prompt: str,
+        system: str | None = None,
+        model: str | None = None,
+        temperature: float = 0.2,
+        **kwargs: Any,
+    ) -> str:
+        messages = [{"role": "user", "content": prompt}]
+        return await self.chat(messages, system=system, model=model, temperature=temperature, **kwargs)
+
+    async def chat(
+        self,
+        messages: list[dict[str, str]],
+        system: str | None = None,
+        model: str | None = None,
+        temperature: float = 0.2,
+        **kwargs: Any,
+    ) -> str:
+        target_model = model or self.model
+        chat_messages = []
+        if system:
+            chat_messages.append({"role": "system", "content": system})
+        chat_messages.extend(messages)
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": target_model,
+            "messages": chat_messages,
+            "temperature": temperature,
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers=headers,
+                    json=payload,
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    choices = data.get("choices", [])
+                    if choices:
+                        return choices[0].get("message", {}).get("content", "")
+                    return ""
+                raise RuntimeError(f"Groq API returned HTTP {resp.status_code}: {resp.text}")
+        except Exception as e:
+            logger.error(f"Groq chat failed: {e}")
+            return f"**Groq Error**: {e}"
+
+
 def get_llm_provider() -> LLMProvider:
     """Get active LLM provider instance."""
+    if settings.LLM_PROVIDER.lower() == "groq" and settings.GROQ_API_KEY:
+        return GroqLLMProvider()
     return OllamaLLMProvider()
+

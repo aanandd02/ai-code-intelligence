@@ -49,19 +49,19 @@ export const deleteRepository = (id: string) =>
 
 // ── Indexing ────────────────────────────────────────────────────────────
 
-export const indexRepository = (repoId: string) =>
-  api.post<IndexingJob>(`/repositories/${repoId}/index`).then(r => r.data);
+export const indexRepository = (repoId: string, force = false) =>
+  api.post<IndexingJob>(`/repositories/${repoId}/index`, null, { params: { force } }).then(r => r.data);
 
-export const getIndexingStatus = (repoId: string, jobId: string) =>
-  api.get<IndexingJob>(`/repositories/${repoId}/index/${jobId}`).then(r => r.data);
+export const getIndexingStatus = (repoId: string) =>
+  api.get<IndexingJob>(`/repositories/${repoId}/indexing-status`).then(r => r.data);
 
 // ── Files ───────────────────────────────────────────────────────────────
 
 export const getFileTree = (repoId: string) =>
-  api.get<{ files: FileInfo[] }>(`/repositories/${repoId}/files`).then(r => r.data);
+  api.get<FileInfo[]>(`/repositories/${repoId}/tree`).then(r => ({ files: r.data }));
 
 export const getFileContent = (repoId: string, filePath: string) =>
-  api.get<FileContent>(`/repositories/${repoId}/files/content`, {
+  api.get<FileContent>(`/repositories/${repoId}/file`, {
     params: { path: filePath },
   }).then(r => r.data);
 
@@ -119,7 +119,7 @@ export const getGitDiff = (repoId: string) =>
   api.get(`/repositories/${repoId}/git/diff`).then(r => r.data);
 
 export const getGitLog = (repoId: string, limit = 20) =>
-  api.get(`/repositories/${repoId}/git/log`, { params: { limit } }).then(r => r.data);
+  api.get(`/repositories/${repoId}/git/log`, { params: { max_commits: limit } }).then(r => r.data);
 
 // ── Patch ───────────────────────────────────────────────────────────────
 

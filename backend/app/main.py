@@ -69,6 +69,20 @@ app.include_router(health_router, prefix="/api")
 app.include_router(repositories_router, prefix="/api")
 
 
+@app.get("/api/models", tags=["models"])
+async def get_models():
+    """List locally installed Ollama models."""
+    from app.llm.provider import get_llm_provider
+
+    llm = get_llm_provider()
+    models = await llm.list_models()
+    return {
+        "models": [{"name": m} for m in models],
+        "current_model": settings.OLLAMA_MODEL,
+        "embedding_model": settings.EMBEDDING_MODEL,
+    }
+
+
 @app.get("/", tags=["root"])
 async def root():
     """Root endpoint with application info."""

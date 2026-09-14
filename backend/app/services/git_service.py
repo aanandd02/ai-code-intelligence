@@ -17,14 +17,15 @@ from app.schemas.schemas import GitDiffResponse, GitLogEntry, GitStatusResponse
 logger = get_logger(__name__)
 
 
-def _get_git_repo(repo_path: Path) -> git.Repo:
-    """Load git repository or raise 400 if not a git repository."""
+def _get_git_repo(repo_path: Path) -> git.Repo | None:
+    """Load git repository or return None if not a git repository."""
     try:
         return git.Repo(repo_path)
-    except git.InvalidGitRepositoryError:
-        raise HTTPException(status_code=400, detail=f"Directory is not a valid Git repository: {repo_path}")
+    except (git.InvalidGitRepositoryError, git.NoSuchPathError):
+        return None
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Git error: {e}")
+        logger.warning(f"Git inspection error on {repo_path}: {e}")
+        return None
 
 
 class GitService:
@@ -32,6 +33,14 @@ class GitService:
 
     def get_status(self, repo_path: Path) -> GitStatusResponse:
         repo = _get_git_repo(repo_path)
+        if not repo:
+            return GitStatusResponse(
+                branch="non-git",
+                is_dirty=False,
+                changed_files=[],
+                untracked_files=[],
+                commit_message="Not a git repository",
+            )
 
         try:
             branch = repo.active_branch.name if not repo.head.is_detached else "DETACHED_HEAD"
@@ -77,6 +86,13 @@ class GitService:
 
     def get_diff(self, repo_path: Path, cached: bool = False) -> GitDiffResponse:
         repo = _get_git_repo(repo_path)
+        if not repo:
+            return GitDiffResponse(
+                diff="Directory is not a Git repository. Initialize git to view diffs.",
+                files_changed=0,
+                insertions=0,
+                deletions=0,
+            )
 
         try:
             if cached:
@@ -105,6 +121,8 @@ class GitService:
 
     def get_log(self, repo_path: Path, max_commits: int = 20) -> list[GitLogEntry]:
         repo = _get_git_repo(repo_path)
+        if not repo:
+            return []
 
         try:
             commits = list(repo.iter_commits(max_count=max_commits))
@@ -117,7 +135,7 @@ class GitService:
                         author=f"{c.author.name} <{c.author.email}>",
                         date=c.committed_datetime,
                         message=c.message.strip(),
-                        files_changed=len(c.stats.files),
+                        files_changed=len(c.stats.files) if hasattr(c, "stats") else 0,
                     )
                 )
             return entries
@@ -126,6 +144,8 @@ class GitService:
 
     def get_blame(self, repo_path: Path, file_path: str) -> list[dict[str, Any]]:
         repo = _get_git_repo(repo_path)
+        if not repo:
+            return []
         target = validate_path_containment(repo_path, file_path)
         rel_path = str(target.relative_to(repo_path))
 

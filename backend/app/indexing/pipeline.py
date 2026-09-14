@@ -100,7 +100,7 @@ async def run_indexing_pipeline(
 
             # Check if unchanged (incremental indexing)
             if not force_reindex and existing_file and existing_file.content_hash == file_hash:
-                skipped_chunks_count += len(existing_file.chunks) if existing_file.chunks else 0
+                skipped_chunks_count += 1
                 processed_files_count += 1
                 continue
 
