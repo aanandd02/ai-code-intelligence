@@ -109,7 +109,7 @@ Requirements:
             raw_reply = await llm.generate(
                 prompt=user_prompt,
                 system=system_prompt,
-                model=settings.OLLAMA_MODEL,
+                model=getattr(llm, "default_model", settings.OLLAMA_MODEL),
             )
 
             match = re.search(rf"```(?:{language})?\s*(.*?)\s*```", raw_reply, re.DOTALL)

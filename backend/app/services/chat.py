@@ -112,7 +112,7 @@ class ChatService:
 
         # 7. Call LLM
         llm = get_llm_provider()
-        target_model = model or settings.OLLAMA_MODEL
+        target_model = model or getattr(llm, "default_model", settings.OLLAMA_MODEL)
         assistant_reply = await llm.chat(
             messages=chat_history,
             system=system_prompt,

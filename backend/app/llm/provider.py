@@ -162,8 +162,14 @@ class GroqLLMProvider(LLMProvider):
 
     def __init__(self, api_key: str | None = None, model: str | None = None):
         self.api_key = api_key or settings.GROQ_API_KEY
-        self.model = model or settings.GROQ_MODEL
+        self.model = model or settings.GROQ_MODEL or "openai/gpt-oss-120b"
+        self.default_model = self.model
         self.base_url = settings.GROQ_BASE_URL.rstrip("/")
+
+    def _resolve_model(self, model: str | None) -> str:
+        if not model or ":" in model or "coder" in model.lower() or model == settings.OLLAMA_MODEL:
+            return self.model
+        return model
 
     async def list_models(self) -> list[str]:
         return [
@@ -191,7 +197,7 @@ class GroqLLMProvider(LLMProvider):
         temperature: float = 0.2,
         **kwargs: Any,
     ) -> str:
-        target_model = model or self.model
+        target_model = self._resolve_model(model)
         chat_messages = []
         if system:
             chat_messages.append({"role": "system", "content": system})
@@ -222,8 +228,19 @@ class GroqLLMProvider(LLMProvider):
                     return ""
                 raise RuntimeError(f"Groq API returned HTTP {resp.status_code}: {resp.text}")
         except Exception as e:
-            logger.error(f"Groq chat failed: {e}")
-            return f"**Groq Error**: {e}"
+            logger.warning(f"Groq chat failed ({e}), falling back to local Ollama...")
+            try:
+                ollama = OllamaLLMProvider()
+                return await ollama.chat(
+                    messages=messages,
+                    system=system,
+                    model=settings.OLLAMA_MODEL,
+                    temperature=temperature,
+                    **kwargs,
+                )
+            except Exception as o_err:
+                logger.error(f"Fallback to Ollama also failed: {o_err}")
+                return f"**Error**: {e}"
 
 
 def get_llm_provider() -> LLMProvider:

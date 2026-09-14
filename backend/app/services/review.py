@@ -148,7 +148,7 @@ You MUST output a JSON object with this exact schema:
             llm_reply = await llm.generate(
                 prompt=user_prompt,
                 system=system_prompt,
-                model=settings.OLLAMA_MODEL,
+                model=getattr(llm, "default_model", settings.OLLAMA_MODEL),
                 temperature=0.1,
             )
 

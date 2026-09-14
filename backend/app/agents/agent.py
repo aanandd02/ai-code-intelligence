@@ -126,7 +126,7 @@ class CodeAgent:
     ) -> AgentResult:
         """Run the autonomous agent loop."""
         llm = get_llm_provider()
-        target_model = model or settings.OLLAMA_MODEL
+        target_model = model or getattr(llm, "default_model", settings.OLLAMA_MODEL)
 
         tools_desc = tool_registry.get_tools_prompt_description()
         repo_summary = generate_repo_summary_text(repo_name, repo_path, languages)
