@@ -33,11 +33,12 @@ export default function Git() {
       const [s, d, l] = await Promise.all([
         getGitStatus(selectedRepo).catch(() => null),
         getGitDiff(selectedRepo).catch(() => ({ diff: '' })),
-        getGitLog(selectedRepo, 20).catch(() => ({ entries: [] })),
+        getGitLog(selectedRepo, 20).catch(() => []),
       ]);
       setStatus(s);
-      setDiff((d as any)?.diff || '');
-      setLog((l as any)?.entries || []);
+      setDiff((d as any)?.diff || (typeof d === 'string' ? d : ''));
+      const logEntries = Array.isArray(l) ? l : Array.isArray((l as any)?.entries) ? (l as any).entries : [];
+      setLog(logEntries);
     } finally {
       setLoading(false);
     }
@@ -78,36 +79,48 @@ export default function Git() {
       <div className="main-body">
         {loading ? (
           <div className="loading-container"><div className="spinner" /></div>
-        ) : activeTab === 'status' && status ? (
-          <div className="animate-in">
-            <div className="card" style={{ marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <GitBranch size={16} style={{ color: 'var(--accent-purple)' }} />
-                <span style={{ fontWeight: 600 }}>{status.branch || 'detached HEAD'}</span>
-                <span className={`badge ${status.is_dirty ? 'badge-warning' : 'badge-ok'}`}>
-                  {status.is_dirty ? 'dirty' : 'clean'}
-                </span>
+        ) : activeTab === 'status' ? (
+          status ? (
+            <div className="animate-in">
+              <div className="card" style={{ marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <GitBranch size={16} style={{ color: 'var(--accent-purple)' }} />
+                  <span style={{ fontWeight: 600 }}>{status.branch || 'detached HEAD'}</span>
+                  <span className={`badge ${status.is_dirty ? 'badge-warning' : 'badge-ok'}`}>
+                    {status.is_dirty ? 'dirty' : 'clean'}
+                  </span>
+                </div>
+                {status.commit_hash && (
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                    {status.commit_hash?.slice(0, 8)} — {status.commit_message}
+                  </div>
+                )}
               </div>
-              {status.commit_hash && (
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
-                  {status.commit_hash?.slice(0, 8)} — {status.commit_message}
+              {status.changed_files && status.changed_files.length > 0 ? (
+                <div className="card">
+                  <div className="card-title" style={{ marginBottom: 8 }}>Changed Files ({status.changed_files.length})</div>
+                  {status.changed_files.map((f: any, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 13, fontFamily: 'monospace' }}>
+                      <span className={`badge badge-${(f.change_type || f.status) === 'A' ? 'ok' : (f.change_type || f.status) === 'D' ? 'error' : 'warning'}`} style={{ fontSize: 10, minWidth: 16, textAlign: 'center' }}>
+                        {f.change_type || f.status}
+                      </span>
+                      {f.path}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="card" style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                  Working directory is clean. No uncommitted changes.
                 </div>
               )}
             </div>
-            {status.changed_files.length > 0 && (
-              <div className="card">
-                <div className="card-title" style={{ marginBottom: 8 }}>Changed Files ({status.changed_files.length})</div>
-                {status.changed_files.map((f, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 13, fontFamily: 'monospace' }}>
-                    <span className={`badge badge-${f.status === 'A' ? 'ok' : f.status === 'D' ? 'error' : 'warning'}`} style={{ fontSize: 10, minWidth: 16, textAlign: 'center' }}>
-                      {f.status}
-                    </span>
-                    {f.path}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          ) : (
+            <div className="empty-state">
+              <GitBranch className="empty-state-icon" />
+              <div className="empty-state-title">No Git Repository Selected</div>
+              <div className="empty-state-description">Select a repository above to view its Git status.</div>
+            </div>
+          )
         ) : activeTab === 'diff' ? (
           <div className="animate-in">
             {diff ? (
@@ -122,19 +135,27 @@ export default function Git() {
           </div>
         ) : activeTab === 'log' ? (
           <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {log.map((entry, i) => (
-              <div key={i} className="card" style={{ padding: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <GitCommit size={14} style={{ color: 'var(--accent-purple)' }} />
-                  <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--accent-blue)' }}>{entry.short_hash}</span>
-                  <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{entry.message}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{new Date(entry.date).toLocaleDateString()}</span>
+            {log.length > 0 ? (
+              log.map((entry, i) => (
+                <div key={i} className="card" style={{ padding: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <GitCommit size={14} style={{ color: 'var(--accent-purple)' }} />
+                    <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--accent-blue)' }}>{entry.short_hash}</span>
+                    <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{entry.message}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{new Date(entry.date).toLocaleDateString()}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
+                    {entry.author} • {entry.files_changed} files changed
+                  </div>
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
-                  {entry.author} • {entry.files_changed} files changed
-                </div>
+              ))
+            ) : (
+              <div className="empty-state">
+                <GitCommit className="empty-state-icon" />
+                <div className="empty-state-title">No Commit History</div>
+                <div className="empty-state-description">No commits found for this repository.</div>
               </div>
-            ))}
+            )}
           </div>
         ) : null}
       </div>
