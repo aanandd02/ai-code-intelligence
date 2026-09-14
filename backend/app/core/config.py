@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///./data/code_intelligence.db"
 
     # ── LLM Provider ("ollama" or "groq") ───────────────────────────────
-    LLM_PROVIDER: str = "groq"
+    LLM_PROVIDER: str = "ollama"
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "openai/gpt-oss-120b"
     GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"

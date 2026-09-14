@@ -95,6 +95,13 @@ class OllamaLLMProvider(LLMProvider):
                     return resp.json().get("response", "")
                 raise RuntimeError(f"Ollama returned HTTP {resp.status_code}: {resp.text}")
         except httpx.ConnectError:
+            if settings.GROQ_API_KEY:
+                try:
+                    logger.info("Local Ollama not reachable, attempting Groq fallback...")
+                    groq = GroqLLMProvider()
+                    return await groq.generate(prompt, system=system, temperature=temperature, **kwargs)
+                except Exception:
+                    pass
             return self._offline_response(prompt, target_model)
         except Exception as e:
             logger.error(f"Ollama generation failed: {e}")
@@ -130,6 +137,13 @@ class OllamaLLMProvider(LLMProvider):
                     return msg.get("content", "")
                 raise RuntimeError(f"Ollama chat error HTTP {resp.status_code}: {resp.text}")
         except httpx.ConnectError:
+            if settings.GROQ_API_KEY:
+                try:
+                    logger.info("Local Ollama not reachable, attempting Groq fallback...")
+                    groq = GroqLLMProvider()
+                    return await groq.chat(messages, system=system, temperature=temperature, **kwargs)
+                except Exception:
+                    pass
             last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
             return self._offline_response(last_user_msg, target_model)
         except Exception as e:
