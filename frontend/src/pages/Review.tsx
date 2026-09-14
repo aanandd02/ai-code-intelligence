@@ -68,7 +68,7 @@ export default function Review() {
       </div>
       <div className="main-body">
         <form onSubmit={handleReview} style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>File path (optional)</label>
               <input className="input" placeholder="src/auth/service.py" value={filePath} onChange={(e) => setFilePath(e.target.value)} />

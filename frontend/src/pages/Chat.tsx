@@ -19,6 +19,7 @@ import {
   Copy,
   Check,
   RefreshCw,
+  X,
 } from 'lucide-react';
 import {
   listRepositories,
@@ -87,7 +88,7 @@ export default function Chat() {
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [sessions, setSessions] = useState<ChatSessionInfo[]>([]);
-  const [showHistory, setShowHistory] = useState(true);
+  const [showHistory, setShowHistory] = useState(() => window.innerWidth > 768);
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [elapsedSec, setElapsedSec] = useState(0);
@@ -149,6 +150,9 @@ export default function Chat() {
 
   const handleSelectSession = async (s: ChatSessionInfo) => {
     if (s.id === sessionId) return;
+    if (window.innerWidth <= 768) {
+      setShowHistory(false);
+    }
     try {
       setLoading(true);
       const data = await getChatSessionMessages(selectedRepo, s.id);
@@ -172,6 +176,9 @@ export default function Chat() {
   const handleNewChat = () => {
     setSessionId(undefined);
     setMessages([]);
+    if (window.innerWidth <= 768) {
+      setShowHistory(false);
+    }
   };
 
   const handleDeleteSession = async (e: React.MouseEvent, sid: string) => {
@@ -367,37 +374,63 @@ export default function Chat() {
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* ── Chat History Sidebar ─────────────────────────────────── */}
         {showHistory && (
-          <div
-            style={{
-              width: 260,
-              background: 'var(--bg-secondary)',
-              borderRight: '1px solid var(--border-default)',
-              display: 'flex',
-              flexDirection: 'column',
-              flexShrink: 0,
-            }}
-          >
-            {/* New Chat Button */}
-            <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-muted)' }}>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleNewChat}
+          <>
+            <div
+              className="chat-drawer-backdrop"
+              onClick={() => setShowHistory(false)}
+              aria-hidden="true"
+            />
+            <div
+              className="chat-sidebar-drawer"
+              style={{
+                width: 260,
+                background: 'var(--bg-secondary)',
+                borderRight: '1px solid var(--border-default)',
+                display: 'flex',
+                flexDirection: 'column',
+                flexShrink: 0,
+              }}
+            >
+              {/* New Chat Button */}
+              <div
                 style={{
-                  width: '100%',
+                  padding: '12px 14px',
+                  borderBottom: '1px solid var(--border-muted)',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
                   gap: 8,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  padding: '7px 12px',
                 }}
               >
-                <Plus size={14} />
-                <span>New Chat</span>
-              </button>
-            </div>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleNewChat}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    padding: '7px 12px',
+                  }}
+                >
+                  <Plus size={14} />
+                  <span>New Chat</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="sidebar-close-btn"
+                  onClick={() => setShowHistory(false)}
+                  title="Close History"
+                  aria-label="Close History"
+                  style={{ display: 'flex', padding: 6 }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
             {/* Sessions List */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '10px 8px' }}>
@@ -544,12 +577,13 @@ export default function Chat() {
               )}
             </div>
           </div>
-        )}
+        </>
+      )}
 
-        {/* ── Active Conversation Stream ───────────────────────────── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Message List */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+      {/* ── Active Conversation Stream ───────────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Message List */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px' }}>
             {messages.length === 0 ? (
               <div className="empty-state" style={{ marginTop: 40, maxWidth: 640, marginLeft: 'auto', marginRight: 'auto' }}>
                 <div
@@ -848,6 +882,8 @@ export default function Chat() {
                 fontSize: 11,
                 color: 'var(--text-tertiary)',
                 padding: '0 2px',
+                flexWrap: 'wrap',
+                gap: 6,
               }}
             >
               <span>Press <strong>Enter</strong> to send. All queries reference local files with line citations.</span>

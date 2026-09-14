@@ -61,7 +61,7 @@ export default function Tests() {
         <div className="card" style={{ marginBottom: 20 }}>
           <div className="card-title" style={{ marginBottom: 12 }}>Generate Tests</div>
           <form onSubmit={handleGenerate}>
-            <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
               <div style={{ flex: 2 }}>
                 <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>File path</label>
                 <input className="input" placeholder="src/auth/service.py" value={filePath} onChange={(e) => setFilePath(e.target.value)} />

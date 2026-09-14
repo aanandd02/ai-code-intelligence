@@ -255,6 +255,17 @@ export default function Explorer() {
   const [loading, setLoading] = useState(false);
   const [contentLoading, setContentLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  const [activeMobileView, setActiveMobileView] = useState<'files' | 'editor'>('files');
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     listRepositories()
@@ -298,6 +309,9 @@ export default function Explorer() {
 
   async function handleFileSelect(path: string) {
     setSelectedFile(path);
+    if (window.innerWidth <= 768) {
+      setActiveMobileView('editor');
+    }
     setContentLoading(true);
     try {
       const data = await getFileContent(selectedRepo, path);
@@ -394,6 +408,54 @@ export default function Explorer() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Mobile View Switcher (Files vs Editor) */}
+          {isMobile && (
+            <div
+              style={{
+                display: 'inline-flex',
+                background: 'var(--bg-primary)',
+                padding: '2px',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-default)',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setActiveMobileView('files')}
+                style={{
+                  border: 'none',
+                  background: activeMobileView === 'files' ? 'var(--accent-blue)' : 'transparent',
+                  color: activeMobileView === 'files' ? '#fff' : 'var(--text-secondary)',
+                  fontSize: 11,
+                  padding: '3px 8px',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                Files
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveMobileView('editor')}
+                disabled={!selectedFile}
+                style={{
+                  border: 'none',
+                  background: activeMobileView === 'editor' ? 'var(--accent-blue)' : 'transparent',
+                  color: activeMobileView === 'editor' ? '#fff' : 'var(--text-secondary)',
+                  fontSize: 11,
+                  padding: '3px 8px',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  opacity: !selectedFile ? 0.5 : 1,
+                }}
+              >
+                Code
+              </button>
+            </div>
+          )}
+
           <button
             type="button"
             className="btn btn-secondary btn-sm"
@@ -419,10 +481,10 @@ export default function Explorer() {
         {/* ── Left Pane: File Tree ─────────────────────────────────── */}
         <div
           style={{
-            width: 290,
+            width: isMobile ? '100%' : 290,
+            display: isMobile && activeMobileView === 'editor' ? 'none' : 'flex',
             background: 'var(--bg-secondary)',
-            borderRight: '1px solid var(--border-default)',
-            display: 'flex',
+            borderRight: isMobile ? 'none' : '1px solid var(--border-default)',
             flexDirection: 'column',
             flexShrink: 0,
           }}
@@ -487,7 +549,15 @@ export default function Explorer() {
         </div>
 
         {/* ── Right Pane: Code Viewer (Monaco Editor) ──────────────── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#1e1e1e' }}>
+        <div
+          style={{
+            flex: 1,
+            display: isMobile && activeMobileView === 'files' ? 'none' : 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            background: '#1e1e1e',
+          }}
+        >
           {selectedFile ? (
             <>
               {/* File Info / Action Toolbar */}
@@ -496,17 +566,30 @@ export default function Explorer() {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  padding: '8px 16px',
+                  padding: '8px 12px',
                   background: 'var(--bg-secondary)',
                   borderBottom: '1px solid var(--border-default)',
                   fontSize: 12,
+                  flexWrap: 'wrap',
+                  gap: 8,
                 }}
               >
                 {/* File Path & Stats */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flexWrap: 'wrap' }}>
+                  {isMobile && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveMobileView('files')}
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: 11, padding: '3px 8px' }}
+                      title="Back to file list"
+                    >
+                      ← Files
+                    </button>
+                  )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
                     <FileCode size={14} style={{ color: 'var(--accent-blue)' }} />
-                    <span>{selectedFile}</span>
+                    <span style={{ wordBreak: 'break-all' }}>{selectedFile}</span>
                   </div>
                   <span
                     className="badge"
@@ -575,18 +658,16 @@ export default function Explorer() {
                   theme="vs-dark"
                   options={{
                     readOnly: true,
-                    minimap: { enabled: true },
+                    minimap: { enabled: !isMobile },
                     fontSize: 13,
                     lineNumbers: 'on',
                     scrollBeyondLastLine: false,
                     automaticLayout: true,
+                    wordWrap: 'on',
                     fontFamily: "'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
                     renderLineHighlight: 'all',
                     smoothScrolling: true,
                     padding: { top: 12, bottom: 12 },
-                    wordWrap: 'off',
-                    folding: true,
-                    bracketPairColorization: { enabled: true },
                   }}
                 />
               </div>
