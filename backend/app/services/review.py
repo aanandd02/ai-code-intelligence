@@ -15,7 +15,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import resolve_repo_path, settings
 from app.core.logging import get_logger
 from app.db.models import Repository, Review
 from app.llm.provider import get_llm_provider
@@ -104,7 +104,7 @@ class ReviewService:
         if not repo:
             raise HTTPException(status_code=404, detail="Repository not found")
 
-        repo_path = Path(repo.path)
+        repo_path = resolve_repo_path(repo)
         content_to_review = code_input or ""
         target_file = file_path
 

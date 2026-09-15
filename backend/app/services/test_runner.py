@@ -16,7 +16,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import resolve_repo_path, settings
 from app.core.logging import get_logger
 from app.db.models import Repository, TestRun
 from app.schemas.schemas import TestRunResponse
@@ -90,7 +90,7 @@ class TestRunnerService:
         if not repo:
             raise HTTPException(status_code=404, detail="Repository not found")
 
-        repo_path = Path(repo.path)
+        repo_path = resolve_repo_path(repo)
         if not repo_path.is_dir():
             raise HTTPException(status_code=400, detail="Repository directory does not exist")
 

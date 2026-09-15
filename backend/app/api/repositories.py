@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import resolve_repo_path, settings
 from app.core.logging import get_logger
 from app.db.database import get_session
 from app.db.models import Repository
@@ -220,7 +220,7 @@ async def list_repo_files(
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
 
-    repo_path = Path(repo.path)
+    repo_path = resolve_repo_path(repo)
     if not repo_path.is_dir():
         raise HTTPException(status_code=400, detail="Repository directory no longer exists on disk")
 
@@ -250,7 +250,7 @@ async def get_repo_file_tree(
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
 
-    repo_path = Path(repo.path)
+    repo_path = resolve_repo_path(repo)
     if not repo_path.is_dir():
         raise HTTPException(status_code=400, detail="Repository directory no longer exists on disk")
 
@@ -269,7 +269,7 @@ async def get_file_content(
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
 
-    file_data = get_repo_file_content(Path(repo.path), path)
+    file_data = get_repo_file_content(resolve_repo_path(repo), path)
     return FileContentResponse(**file_data)
 
 
@@ -500,7 +500,7 @@ async def get_repository_git_status(
 
     from app.services.git_service import git_service
 
-    return git_service.get_status(Path(repo.path))
+    return git_service.get_status(resolve_repo_path(repo))
 
 
 @router.get("/{repo_id}/git/diff", response_model=GitDiffResponse)
@@ -517,7 +517,7 @@ async def get_repository_git_diff(
 
     from app.services.git_service import git_service
 
-    return git_service.get_diff(Path(repo.path), cached=cached)
+    return git_service.get_diff(resolve_repo_path(repo), cached=cached)
 
 
 @router.get("/{repo_id}/git/log", response_model=list[GitLogEntry])
@@ -534,7 +534,7 @@ async def get_repository_git_log(
 
     from app.services.git_service import git_service
 
-    return git_service.get_log(Path(repo.path), max_commits=max_commits)
+    return git_service.get_log(resolve_repo_path(repo), max_commits=max_commits)
 
 
 @router.post("/{repo_id}/patch/preview", response_model=PatchPreviewResponse)

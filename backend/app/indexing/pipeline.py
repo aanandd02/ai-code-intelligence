@@ -14,7 +14,7 @@ import uuid
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import resolve_repo_path, settings
 from app.core.logging import get_logger
 from app.db.database import get_session
 from app.db.models import Chunk, File, IndexingJob, Repository
@@ -45,7 +45,7 @@ async def run_indexing_pipeline(
     if not repo:
         raise ValueError(f"Repository {repo_id} not found")
 
-    repo_path = Path(repo.path)
+    repo_path = resolve_repo_path(repo)
     if not repo_path.is_dir():
         raise ValueError(f"Repository directory does not exist: {repo.path}")
 

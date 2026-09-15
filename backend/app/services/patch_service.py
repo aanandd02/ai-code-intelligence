@@ -16,7 +16,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import resolve_repo_path, settings
 from app.core.logging import get_logger
 from app.core.security import validate_path_containment
 from app.db.models import GeneratedPatch, Repository
@@ -49,7 +49,7 @@ class PatchService:
         if not repo:
             raise HTTPException(status_code=404, detail="Repository not found")
 
-        repo_path = Path(repo.path)
+        repo_path = resolve_repo_path(repo)
         processed_files: list[PatchFile] = []
         warnings: list[str] = []
 
@@ -139,7 +139,7 @@ class PatchService:
         if not repo:
             raise HTTPException(status_code=404, detail="Repository not found")
 
-        repo_path = Path(repo.path)
+        repo_path = resolve_repo_path(repo)
         files_data = json.loads(patch.files_json or "[]")
 
         # Create backup directory

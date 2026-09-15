@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.agent import code_agent
-from app.core.config import settings
+from app.core.config import resolve_repo_path, settings
 from app.core.logging import get_logger
 from app.db.models import Investigation, Repository
 from app.schemas.schemas import (
@@ -40,7 +40,7 @@ class InvestigationService:
         if not repo:
             raise HTTPException(status_code=404, detail="Repository not found")
 
-        repo_path = Path(repo.path)
+        repo_path = resolve_repo_path(repo)
         repo_languages = json.loads(repo.languages) if repo.languages else None
 
         # Run autonomous agent with the issue description

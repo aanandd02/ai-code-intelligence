@@ -8,7 +8,7 @@ from typing import Sequence
 
 from fastapi import HTTPException
 
-from app.core.config import settings
+from app.core.config import resolve_repo_path, settings
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -19,7 +19,7 @@ def validate_path_containment(base_dir: Path, target_path: str | Path) -> Path:
     Ensure target_path resolves strictly within base_dir.
     Raises HTTPException 403 on path traversal attempt.
     """
-    base_resolved = base_dir.resolve()
+    base_resolved = resolve_repo_path(base_dir).resolve()
     target_resolved = (base_resolved / target_path).resolve()
 
     try:

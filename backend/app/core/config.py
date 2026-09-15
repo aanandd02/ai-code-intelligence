@@ -4,6 +4,7 @@ All values can be overridden via environment variables or .env file.
 """
 
 from pathlib import Path
+from typing import Any
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -90,12 +91,12 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
-def resolve_host_path(path: str | None) -> Path | None:
+def resolve_host_path(path: str | Path | None) -> Path | None:
     """
     Convert a host-machine absolute path to the corresponding in-container path.
     When running inside Docker on macOS, /Users/... is accessible as
     /host_fs/host_mnt/Users/...
-    Returns None if path is None or cannot be resolved.
+    Returns None if path is None.
     """
     if not path:
         return None
@@ -104,8 +105,25 @@ def resolve_host_path(path: str | None) -> Path | None:
         return p
     # Try prepending the host_fs prefix
     if settings.HOST_FS_PREFIX:
-        candidate = Path(settings.HOST_FS_PREFIX) / p.relative_to("/")
-        if candidate.exists():
-            return candidate
+        try:
+            rel = p.relative_to("/") if p.is_absolute() else p
+            candidate = Path(settings.HOST_FS_PREFIX) / rel
+            if candidate.exists():
+                return candidate
+        except Exception:
+            pass
     return p  # return as-is; caller handles non-existent gracefully
+
+
+def resolve_repo_path(repo_or_path: Any) -> Path:
+    """Safely resolve a repository model, string path, or Path to an existing filesystem Path."""
+    if not repo_or_path:
+        return Path(".")
+    if hasattr(repo_or_path, "path"):
+        raw = repo_or_path.path
+    else:
+        raw = repo_or_path
+    resolved = resolve_host_path(raw)
+    return resolved if resolved is not None else Path(raw)
+
 

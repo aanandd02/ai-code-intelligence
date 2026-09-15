@@ -11,7 +11,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import resolve_host_path, resolve_repo_path, settings
 from app.core.logging import get_logger
 from app.db.models import Repository
 from app.indexing.file_discovery import build_file_tree, discover_files
@@ -22,7 +22,8 @@ logger = get_logger(__name__)
 
 def validate_repo_path(path: str) -> Path:
     """Validate and resolve repository path with path traversal protection."""
-    resolved = Path(path).resolve()
+    p = Path(path)
+    resolved = resolve_repo_path(p)
 
     if not resolved.exists():
         raise HTTPException(status_code=400, detail=f"Path does not exist: {path}")
@@ -33,6 +34,7 @@ def validate_repo_path(path: str) -> Path:
     if settings.ALLOWED_REPO_BASE_PATHS:
         allowed = any(
             str(resolved).startswith(str(Path(base).resolve()))
+            or str(p.resolve()).startswith(str(Path(base).resolve()))
             for base in settings.ALLOWED_REPO_BASE_PATHS
         )
         if not allowed:
@@ -41,14 +43,15 @@ def validate_repo_path(path: str) -> Path:
                 detail="Repository path is not within allowed base paths",
             )
 
-    return resolved
+    return p
 
 
 def safe_resolve_relative_path(repo_path: Path, rel_path: str) -> Path:
     """Safely resolve a relative file path inside a repository."""
-    resolved = (repo_path / rel_path).resolve()
+    effective_repo_path = resolve_repo_path(repo_path)
+    resolved = (effective_repo_path / rel_path).resolve()
     try:
-        resolved.relative_to(repo_path)
+        resolved.relative_to(effective_repo_path)
     except ValueError:
         raise HTTPException(status_code=403, detail="Access denied: path traversal attempt")
 
@@ -65,7 +68,7 @@ async def scan_repository_files(repo: Repository, session: AsyncSession) -> dict
     """
     Scan files in a repository, update total_files and language stats in DB.
     """
-    repo_path = Path(repo.path)
+    repo_path = resolve_repo_path(repo)
     discovered = list(discover_files(repo_path))
     lang_stats = get_language_stats(discovered)
 

@@ -11,7 +11,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import resolve_repo_path, settings
 from app.core.logging import get_logger
 from app.db.models import Repository
 from app.indexing.language_detector import detect_language
@@ -85,7 +85,7 @@ class TestGeneratorService:
         if not repo:
             raise HTTPException(status_code=404, detail="Repository not found")
 
-        repo_path = Path(repo.path)
+        repo_path = resolve_repo_path(repo)
         file_data = get_repo_file_content(repo_path, file_path)
         content = file_data["content"]
         language = file_data["language"] or detect_language(file_path) or "python"
